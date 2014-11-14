@@ -4,7 +4,7 @@
 
 #include "harris.h"
 
-Harris::Harris(Mat img, float k, int filterRange) {
+Harris::Harris(Mat img, float k, int filterRange, bool gauss) {
     // (1) Convert to greyscalescale image
     Mat greyscaleImg = convertRgbToGrayscale(img);
 
@@ -12,7 +12,12 @@ Harris::Harris(Mat img, float k, int filterRange) {
     Derivatives derivatives = computeDerivatives(greyscaleImg);
 
     // (3) Median Filtering
-    Derivatives mDerivatives = applyMeanToDerivatives(derivatives, filterRange);
+    Derivatives mDerivatives;
+    if(gauss) {
+        mDerivatives = applyGaussToDerivatives(derivatives, filterRange);
+    } else {
+        mDerivatives = applyMeanToDerivatives(derivatives, filterRange);
+    }
 
     // (4) Compute Harris Responses
     Mat harrisResponses = computeHarrisResponses(k, mDerivatives);
@@ -103,6 +108,20 @@ Mat Harris::convertRgbToGrayscale(Mat& img) {
 }
 
 //-----------------------------------------------------------------------------------------------
+Derivatives Harris::applyGaussToDerivatives(Derivatives& dMats, int filterRange) {
+    if(filterRange == 0)
+        return dMats;
+
+    Derivatives mdMats;
+
+    mdMats.Ix = gaussFilter(dMats.Ix, filterRange);
+    mdMats.Iy = gaussFilter(dMats.Iy, filterRange);
+    mdMats.Ixy = gaussFilter(dMats.Ixy, filterRange);
+
+    return mdMats;
+}
+
+//-----------------------------------------------------------------------------------------------
 Derivatives Harris::applyMeanToDerivatives(Derivatives& dMats, int filterRange) {
     if(filterRange == 0)
         return dMats;
@@ -113,13 +132,9 @@ Derivatives Harris::applyMeanToDerivatives(Derivatives& dMats, int filterRange) 
     Mat mIy = computeIntegralImg(dMats.Iy);
     Mat mIxy = computeIntegralImg(dMats.Ixy);
 
-    Mat mgIx = gaussFilter(mIx, filterRange);
-    Mat mgIy = gaussFilter(mIy, filterRange);
-    Mat mgIxy = gaussFilter(mIxy, filterRange);
-
-    mdMats.Ix = meanFilter(mgIx, filterRange);
-    mdMats.Iy = meanFilter(mgIy, filterRange);
-    mdMats.Ixy = meanFilter(mgIxy, filterRange);
+    mdMats.Ix = meanFilter(mIx, filterRange);
+    mdMats.Iy = meanFilter(mIy, filterRange);
+    mdMats.Ixy = meanFilter(mIxy, filterRange);
 
     return mdMats;
 }
@@ -127,7 +142,7 @@ Derivatives Harris::applyMeanToDerivatives(Derivatives& dMats, int filterRange) 
 //-----------------------------------------------------------------------------------------------
 Derivatives Harris::computeDerivatives(Mat& greyscaleImg) {
     // Helper Mats for better time complexity
-    Mat sobelHelperV(greyscaleImg.rows-2, greyscaleImg.cols, CV_32FC3);
+    Mat sobelHelperV(greyscaleImg.rows-2, greyscaleImg.cols, CV_32F);
     for(int r=1; r<greyscaleImg.rows-1; r++) {
         for(int c=0; c<greyscaleImg.cols; c++) {
 
@@ -139,7 +154,7 @@ Derivatives Harris::computeDerivatives(Mat& greyscaleImg) {
         }
     }
 
-    Mat sobelHelperH(greyscaleImg.rows, greyscaleImg.cols-2, CV_32FC3);
+    Mat sobelHelperH(greyscaleImg.rows, greyscaleImg.cols-2, CV_32F);
     for(int r=0; r<greyscaleImg.rows; r++) {
         for(int c=1; c<greyscaleImg.cols-1; c++) {
 
@@ -152,9 +167,9 @@ Derivatives Harris::computeDerivatives(Mat& greyscaleImg) {
     }
 
     // Apply Sobel filter to compute 1st derivatives
-    Mat Ix(greyscaleImg.rows-2, greyscaleImg.cols-2, CV_32FC3);
-    Mat Iy(greyscaleImg.rows-2, greyscaleImg.cols-2, CV_32FC3);
-    Mat Ixy(greyscaleImg.rows-2, greyscaleImg.cols-2, CV_32FC3);
+    Mat Ix(greyscaleImg.rows-2, greyscaleImg.cols-2, CV_32F);
+    Mat Iy(greyscaleImg.rows-2, greyscaleImg.cols-2, CV_32F);
+    Mat Ixy(greyscaleImg.rows-2, greyscaleImg.cols-2, CV_32F);
 
     for(int r=0; r<greyscaleImg.rows-2; r++) {
         for(int c=0; c<greyscaleImg.cols-2; c++) {
@@ -174,7 +189,7 @@ Derivatives Harris::computeDerivatives(Mat& greyscaleImg) {
 
 //-----------------------------------------------------------------------------------------------
 Mat Harris::computeHarrisResponses(float k, Derivatives& d) {
-    Mat M(d.Iy.rows, d.Ix.cols, CV_32FC3);
+    Mat M(d.Iy.rows, d.Ix.cols, CV_32F);
 
     for(int r=0; r<d.Iy.rows; r++) {  
         for(int c=0; c<d.Iy.cols; c++) {
@@ -246,7 +261,7 @@ Mat Harris::meanFilter(Mat& intImg, int range) {
 
 Mat Harris::gaussFilter(Mat& img, int range) {
     // Helper Mats for better time complexity
-    Mat gaussHelperV(img.rows-range*2, img.cols-range*2, CV_32FC3);
+    Mat gaussHelperV(img.rows-range*2, img.cols-range*2, CV_32F);
     for(int r=range; r<img.rows-range; r++) {
         for(int c=range; c<img.cols-range; c++) {
             float res = 0;
@@ -258,11 +273,10 @@ Mat Harris::gaussFilter(Mat& img, int range) {
             }
 
             gaussHelperV.at<float>(r-range,c-range) = res;
-
         }
     }
 
-    Mat gauss(img.rows-range*2, img.cols-range*2, CV_32FC3);
+    Mat gauss(img.rows-range*2, img.cols-range*2, CV_32F);
     for(int r=range; r<img.rows-range; r++) {
         for(int c=range; c<img.cols-range; c++) {
             float res = 0;
@@ -274,9 +288,11 @@ Mat Harris::gaussFilter(Mat& img, int range) {
             }
 
             gauss.at<float>(r-range,c-range) = res;
-
         }
     }
+
+            cout << "------------------------------" << endl;
+
 
     return gauss;
 }

@@ -29,11 +29,12 @@ int slider_valueMaxsp = 10;
 int slider_valueMeanfilter = 2;
 int slider_valuePercentage = 1;
 float percentage;
+bool gauss = true;
 Mat m_img;
 
 void doHarris() {
     // compute harris
-    Harris harris(m_img, k, boxFilterSize);
+    Harris harris(m_img, k, boxFilterSize, gauss);
 
     // get vector of points wanted
     vector<pointData> resPts = harris.getMaximaPoints(percentage, boxFilterSize, maximaSuppressionDimension);
@@ -70,6 +71,20 @@ void CallbackTrackbarPercentage(int value, void* userdata) {
     doHarris();
 }
 
+void CallBackFuncMouse(int event, int x, int y, int flags, void* userdata) {
+    if  ( event == EVENT_LBUTTONDOWN ) {
+        if(gauss) {
+            cout << "Changed to gaussian filter." << endl;
+            gauss = false;
+        } else {
+            cout << "Changed to mean filter." << endl;
+            gauss = true;
+        }
+
+        doHarris();
+    }
+}
+
 //-----------------------------------------------------------------------------------------------
 int main(int argc, char** argv) {
     // read image from file + error handling
@@ -83,20 +98,22 @@ int main(int argc, char** argv) {
         img = imread(argv[1]);
     }
 
-    if(img.rows > 100 || img.cols > 100) {
-        int newrows = 600;
-        int newcols = img.cols * newrows / img.rows;
+    // if(img.rows > 100 || img.cols > 100) {
+    //     int newrows = 600;
+    //     int newcols = img.cols * newrows / img.rows;
 
-        resize(img, img, Size(newcols, newrows), 0, 0, INTER_CUBIC);
-    }
+    //     resize(img, img, Size(newcols, newrows), 0, 0, INTER_CUBIC);
+    // }
     img.copyTo(m_img);
 
     // create UI and show the image
     namedWindow("HarrisCornerDetector", 1);
 
     createTrackbar("maxima suppresison", "HarrisCornerDetector", &maximaSuppressionDimension, 14, CallbackTrackbarMeanfilter);
-    createTrackbar("size mean filter", "HarrisCornerDetector", &slider_valueMeanfilter, 20, CallbackTrackbarMeanfilter);
+    createTrackbar("size filter", "HarrisCornerDetector", &slider_valueMeanfilter, 20, CallbackTrackbarMeanfilter);
     createTrackbar("number points", "HarrisCornerDetector", &slider_valuePercentage, 1000, CallbackTrackbarPercentage);
+    setMouseCallback("HarrisCornerDetector", CallBackFuncMouse);
+
 
     imshow("HarrisCornerDetector", img);
     waitKey(0);
