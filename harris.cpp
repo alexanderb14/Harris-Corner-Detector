@@ -291,8 +291,5 @@ Mat Harris::gaussFilter(Mat& img, int range) {
         }
     }
 
-            cout << "------------------------------" << endl;
-
-
     return gauss;
 }
