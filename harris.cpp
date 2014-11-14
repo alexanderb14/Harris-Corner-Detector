@@ -178,10 +178,10 @@ Mat Harris::computeHarrisResponses(float k, Derivatives& d) {
             float   a11, a12,
                     a21, a22;
 
-            a22 = d.Ix.at<float>(r,c) * d.Ix.at<float>(r,c);
+            a11 = d.Ix.at<float>(r,c) * d.Ix.at<float>(r,c);
             a22 = d.Iy.at<float>(r,c) * d.Iy.at<float>(r,c);
+            a21 = d.Ix.at<float>(r,c) * d.Iy.at<float>(r,c);
             a12 = d.Ix.at<float>(r,c) * d.Iy.at<float>(r,c);
-            a11 = d.Ix.at<float>(r,c) * d.Iy.at<float>(r,c);
 
             float det = a11*a22 - a12*a21;
             float trace = a11 + a22;
