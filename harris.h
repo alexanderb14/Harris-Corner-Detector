@@ -22,6 +22,7 @@ private:
 
 	Mat computeIntegralImg(Mat& img);
 	Mat meanFilter(Mat& intImg, int range);
+	Mat gaussFilter(Mat& img, int range);
 
 private:
 	Mat m_harrisResponses;

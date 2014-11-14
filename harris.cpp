@@ -7,7 +7,6 @@
 Harris::Harris(Mat img, float k, int filterRange) {
     // (1) Convert to greyscalescale image
     Mat greyscaleImg = convertRgbToGrayscale(img);
-    // Util::DisplayMat(greyscaleImg);
 
     // (2) Compute Derivatives
     Derivatives derivatives = computeDerivatives(greyscaleImg);
@@ -114,9 +113,13 @@ Derivatives Harris::applyMeanToDerivatives(Derivatives& dMats, int filterRange) 
     Mat mIy = computeIntegralImg(dMats.Iy);
     Mat mIxy = computeIntegralImg(dMats.Ixy);
 
-    mdMats.Ix = meanFilter(mIx, filterRange);
-    mdMats.Iy = meanFilter(mIy, filterRange);
-    mdMats.Ixy = meanFilter(mIxy, filterRange);
+    Mat mgIx = gaussFilter(mIx, filterRange);
+    Mat mgIy = gaussFilter(mIy, filterRange);
+    Mat mgIxy = gaussFilter(mIxy, filterRange);
+
+    mdMats.Ix = meanFilter(mgIx, filterRange);
+    mdMats.Iy = meanFilter(mgIy, filterRange);
+    mdMats.Ixy = meanFilter(mgIxy, filterRange);
 
     return mdMats;
 }
@@ -239,4 +242,41 @@ Mat Harris::meanFilter(Mat& intImg, int range) {
     }
 
     return medianFilteredMat;
+}
+
+Mat Harris::gaussFilter(Mat& img, int range) {
+    // Helper Mats for better time complexity
+    Mat gaussHelperV(img.rows-range*2, img.cols-range*2, CV_32FC3);
+    for(int r=range; r<img.rows-range; r++) {
+        for(int c=range; c<img.cols-range; c++) {
+            float res = 0;
+
+            for(int x = -range; x<=range; x++) {
+                float m = 1/sqrt(2*M_PI)*exp(-0.5*x*x);
+
+                res += m * img.at<float>(r-range,c-range);
+            }
+
+            gaussHelperV.at<float>(r-range,c-range) = res;
+
+        }
+    }
+
+    Mat gauss(img.rows-range*2, img.cols-range*2, CV_32FC3);
+    for(int r=range; r<img.rows-range; r++) {
+        for(int c=range; c<img.cols-range; c++) {
+            float res = 0;
+
+            for(int x = -range; x<=range; x++) {
+                float m = 1/sqrt(2*M_PI)*exp(-0.5*x*x);
+
+                res += m * gaussHelperV.at<float>(r-range,c-range);
+            }
+
+            gauss.at<float>(r-range,c-range) = res;
+
+        }
+    }
+
+    return gauss;
 }
