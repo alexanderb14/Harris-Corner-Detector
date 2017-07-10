@@ -4,7 +4,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "Util.h"
+#include "util.h"
 
 using namespace std;
 using namespace cv;
